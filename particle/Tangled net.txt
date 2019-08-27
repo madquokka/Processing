@@ -1,0 +1,66 @@
+int step = 24;
+int margin = 300;
+static int MAX = 30;
+Attract[] A=new Attract[MAX];
+
+class Attract {
+  float x;
+  float y;
+  float vx;
+  float vy;
+
+  Attract() {
+    x = random(width);
+    y = random(height);
+    float rad=random(TWO_PI);
+    vx=cos(rad)*8;
+    vy=sin(rad)*8;
+  }
+
+  void update() {
+    x+=vx;
+    if (x<0 || x>width) {
+      vx=-vx;
+      x+=vx*2;
+    }
+    y+=vy;
+    if (y<0 || y>width) {
+      vy=-vy;
+      y+=vy*2;
+    }
+  }
+}
+
+void setup() {
+  size(640, 640);
+  stroke(255);
+  noFill();
+  for (int i=0; i<MAX; i++) {
+    A[i] = new Attract();
+  }
+}
+
+void draw() {
+  background(0);
+  float f=radians(frameCount);
+  for (Attract a : A) {
+    a.update();
+  }
+  for (int y=step/2-margin; y<width+margin; y+=step) {
+    beginShape();
+    for (int x=step/2-margin; x<height+margin; x+=step) {
+      float dx=0;
+      float dy=0;
+      for (Attract a : A) {
+        float dis = dist(a.x, a.y, x, y);
+        dx+=(a.x-x)/dis*map(cos(f), -1, 1, 8, 12);
+        dy+=(a.y-y)/dis*map(sin(f/PI), -1, 1, 20, 26);
+      }
+      curveVertex(x+dx, y+dy);
+      strokeWeight(3);
+      point(x+dx, y+dy);
+    }
+    strokeWeight(1);
+    endShape();
+  }
+}

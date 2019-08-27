@@ -1,0 +1,143 @@
+//PImage img = loadImage("photo-colored.jpg");
+PImage img = loadImage("flowers.jpg");
+
+ArrayList<ContinuousLine> lines;
+
+void setup() {
+  fullScreen(); 
+  background(255);
+  
+  noiseSeed(int(random(0.0, 10000.0)));
+  lines = new ArrayList<ContinuousLine>();
+  createLine(width/2, height/2);
+} 
+
+void draw() {
+  for (int i=lines.size()-1; i>-1; i--) {
+    ContinuousLine l = lines.get(i);
+    if(l.lifeSpan<=0){
+      lines.remove(i);
+    }else{
+      l.update();
+      l.draw();
+    }
+  }
+}
+
+void createLine(int x, int y){
+  for (int i=0;i<10;i++) {
+    ContinuousLine l = new ContinuousLine();
+    l.setup(img, x, y, random(100, 200));
+    lines.add(l);
+  }
+}
+
+void mousePressed() {
+  createLine(mouseX, mouseY);
+}
+
+void keyPressed(){
+  //hit the "s" key and save my image
+  if (key=='s'){
+    //when running on the web it will put the PNG in a new browser tab
+    saveFrame("images/lines-###.png");
+  }else{
+    background(255);
+  }
+}
+
+class ContinuousLine
+{
+  PImage img;
+
+  PVector originPos = new PVector();
+  PVector destinyPos = new PVector();
+  PVector currentPos = new PVector();
+  PVector previousPos = new PVector();
+
+  PVector topLeft = new PVector();
+  PVector topRight = new PVector();
+  PVector bottomLeft = new PVector();
+  PVector bottomRight = new PVector();
+
+  float velocity = 0;
+  color currentColor = new color();
+	
+  float noiseMultiplierX = random(0.001, 0.010);
+  float noiseMultiplierY = random(0.001, 0.010);
+  float noiseStepX = random(10);
+  float noiseStepY = random(10);
+
+  int radius = 800;
+  int lifeSpan = random(100, 300);
+  int startLifeSpan;
+
+  void setup(PImage img, int x, int y) {
+    this.img = img;
+    topRight.x = topLeft.x = previousPos.x = originPos.x = destinyPos.x = currentPos.x = x;
+    topRight.y = topLeft.y = previousPos.y = originPos.y = destinyPos.y = currentPos.y = y;
+    
+    startLifeSpan = lifeSpan;
+  }
+
+  void update(){
+    radius += 5;
+    lifeSpan--;
+    float progress = lifeSpan/startLifeSpan;
+    
+    //randomDestiny
+    noiseStepX += noiseMultiplierX;
+    noiseStepY += noiseMultiplierY;
+    destinyPos.x = originPos.x + (noise(noiseStepX)-0.5) * radius;
+    destinyPos.y = originPos.y + (noise(noiseStepY)-0.5) * radius;
+    
+    //easing
+    currentPos.x += (destinyPos.x-currentPos.x) * 0.07;
+    currentPos.y += (destinyPos.y-currentPos.y) * 0.07;
+    
+    velocity += (dist(currentPos.x, currentPos.y, previousPos.x, previousPos.y) - velocity) * 0.19;
+    float size = lerp(20, 4, max(0, min(1, velocity/10))) * (1-pow((progress-0.5)*2, 2));
+
+    float angle = atan2(currentPos.y-previousPos.y, currentPos.x-previousPos.x)+PI/2;//we sum PI/2 to add 90o degrees and rotate properly
+    float angleX = cos(angle);
+    float angleY = sin(angle);
+    
+    bottomLeft.x = topLeft.x;
+    bottomLeft.y = topLeft.y;
+    bottomRight.x = topRight.x;
+    bottomRight.y = topRight.y;
+    topLeft.x = currentPos.x-size*angleX;
+    topLeft.y = currentPos.y-size*angleY;
+    topRight.x = currentPos.x+size*angleX;
+    topRight.y = currentPos.y+size*angleY;
+    
+    previousPos.x = currentPos.x;
+    previousPos.y = currentPos.y;
+  }
+
+  void draw() {
+    //make transition between image pixel colors
+    currentColor = lerpColor(currentColor, img.get(int(currentPos.x/3), int(currentPos.y/3)), max(0, min(1-velocity/2, 1)));
+    
+    //main connection shape
+    fill(currentColor);
+    stroke(currentColor);
+    //noStroke();
+	beginShape();
+    vertex(topLeft.x, topLeft.y);
+    vertex(topRight.x, topRight.y);
+    vertex(bottomRight.x, bottomRight.y);
+    vertex(bottomLeft.x, bottomLeft.y);
+    endShape(CLOSE);
+    
+    //fix gap between shapes
+    stroke(currentColor);
+    line(topLeft.x, topLeft.y, bottomLeft.x, bottomLeft.y);
+    
+    //contour
+    stroke(red(currentColor)*0.9, green(currentColor)*0.9, blue(currentColor)*0.9);
+    line(topLeft.x, topLeft.y, bottomLeft.x, bottomLeft.y);
+    stroke(red(currentColor)*1.1, green(currentColor)*1.1, blue(currentColor)*1.1);
+    line(topRight.x, topRight.y, bottomRight.x, bottomRight.y);
+  } 
+}
